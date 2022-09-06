@@ -101,6 +101,10 @@ async def on_presence_update(before, after):
     activity = after.activity
     if activity and activity.name == "League of Legends" and activity.state == "In Game":
         champion = activity.large_image_text.lower().replace("'", "").replace(".", "").replace(" ", "")
+        if champion == "nunu&willump":
+            champion = "nunu"
+        elif champion == "renataglasc":
+            champion = "renata"
         user = client.get_user(after.id)
         await user.send(
             f"Hey, I noticed you are playing {champion.capitalize()}. "
