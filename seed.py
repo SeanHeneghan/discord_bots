@@ -7,10 +7,11 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from io import BytesIO
 from pymongo import MongoClient
+from pymongo.server_api import ServerApi
 from decouple import config
 
-client = MongoClient("mongodb://localhost:27017/")
-league_db = client["league_bot"]
+client = MongoClient(f"mongodb+srv://{config('MONGODB_USERNAME')}:{config('MONGODB_PASSWORD')}@leaguebot.3wl3vhh.mongodb.net/?retryWrites=true&w=majority", server_api=ServerApi('1'))
+league_db = client["leaguebot"]
 champions = league_db["champions"]
 
 cass.set_riot_api_key(config("RIOT_API_KEY"))
@@ -43,9 +44,10 @@ def seed_data():
             driver.get(url)
 
             # deal with privacy setting acceptance
-            WebDriverWait(driver, 15).until(
+            WebDriverWait(driver, 10).until(
                 ec.element_to_be_clickable((By.CLASS_NAME, "css-47sehv"))
             ).click()
+            driver.implicitly_wait(5)
 
             # get rune div from u.gg
             element = driver.find_element(

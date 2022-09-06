@@ -1,13 +1,8 @@
 from decouple import config
 import discord
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as ec
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 from io import BytesIO
+from pymongo import MongoClient
+from pymongo.server_api import ServerApi
 
 intents = discord.Intents.all()
 intents.message_content = True
@@ -35,32 +30,19 @@ async def on_message(message):
                     await message.channel.send("Please only call the function via __*action* *champion* *game_mode*.")
                 else:
                     try:
-                        url = f"https://u.gg/lol/champions/{champion}/build"
+                        db_client = MongoClient(
+                            f"mongodb+srv://{config('MONGODB_USERNAME')}:{config('MONGODB_PASSWORD')}@leaguebot.3wl3vhh.mongodb.net/?retryWrites=true&w=majority",
+                            server_api=ServerApi('1'))
+                        league_db = db_client["leaguebot"]
+                        champions = league_db["champions"]
+                        champ = champions.find({"name": champion})
                     except:
                         await message.channel.send("Not a valid League Of Legends Champion.")
                     else:
-                        options = webdriver.ChromeOptions()
-                        options.add_argument("headless")
-                        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-                        driver.set_window_position(0, 0)
-                        driver.set_window_size(1920, 1080)
-                        driver.get(url)
-
-                        # deal with privacy setting acceptance
-                        WebDriverWait(driver, 10).until(
-                            ec.element_to_be_clickable((By.CLASS_NAME, "css-47sehv"))
-                        ).click()
-
-                        # get rune div from u.gg
-                        element = driver.find_element(
-                            by=By.XPATH,
-                            value="/html/body/div[3]/div/div[2]/div[2]/div/div/div/div/div/div/div/div[5]/div/div[2]/div/div[1]",
-                        )
-                        file = BytesIO(element.screenshot_as_png)
+                        file = BytesIO(champ[0]["runes"])
 
                         # pm the user the div as an image
                         await message.author.send(file=discord.File(file, "image.png"))
-                        driver.quit()
             else:
                 await message.channel.send("Please supply a champion.")
 
@@ -71,30 +53,19 @@ async def on_message(message):
                     await message.channel.send("Please only call the function via __*action* *champion* *game_mode*.")
                 else:
                     try:
-                        url = f"https://u.gg/lol/champions/{champion}/build"
+                        db_client = MongoClient(
+                            f"mongodb+srv://{config('MONGODB_USERNAME')}:{config('MONGODB_PASSWORD')}@leaguebot.3wl3vhh.mongodb.net/?retryWrites=true&w=majority",
+                            server_api=ServerApi('1'))
+                        league_db = db_client["leaguebot"]
+                        champions = league_db["champions"]
+                        champ = champions.find({"name": champion})
                     except:
                         await message.channel.send("Not a valid League Of Legends Champion.")
                     else:
-                        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-                        driver.set_window_position(0, 0)
-                        driver.set_window_size(1920, 1080)
-                        driver.get(url)
-
-                        # deal with privacy setting acceptance
-                        WebDriverWait(driver, 10).until(
-                            ec.element_to_be_clickable((By.CLASS_NAME, "css-47sehv"))
-                        ).click()
-
-                        # get build div from u.gg
-                        element = driver.find_element(
-                            by=By.XPATH,
-                            value="/html/body/div[3]/div/div[2]/div[2]/div/div/div/div/div/div/div/div[5]/div/div[9]",
-                        )
-                        file = BytesIO(element.screenshot_as_png)
+                        file = BytesIO(champ[0]["build"])
 
                         # pm the user the div as an image
                         await message.author.send(file=discord.File(file, "image.png"))
-                        driver.quit()
             else:
                 await message.channel.send("Please supply a champion.")
 
@@ -105,30 +76,19 @@ async def on_message(message):
                     await message.channel.send("Please only call the function via __*action* *champion* *game_mode*.")
                 else:
                     try:
-                        url = f"https://u.gg/lol/champions/{champion}/build"
+                        db_client = MongoClient(
+                            f"mongodb+srv://{config('MONGODB_USERNAME')}:{config('MONGODB_PASSWORD')}@leaguebot.3wl3vhh.mongodb.net/?retryWrites=true&w=majority",
+                            server_api=ServerApi('1'))
+                        league_db = db_client["leaguebot"]
+                        champions = league_db["champions"]
+                        champ = champions.find({"name": champion})
                     except:
                         await message.channel.send("Not a valid League Of Legends Champion.")
                     else:
-                        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-                        driver.set_window_position(0, 0)
-                        driver.set_window_size(1920, 1080)
-                        driver.get(url)
-
-                        # deal with privacy setting acceptance
-                        WebDriverWait(driver, 10).until(
-                            ec.element_to_be_clickable((By.CLASS_NAME, "css-47sehv"))
-                        ).click()
-
-                        # get skills div from u.gg
-                        element = driver.find_element(
-                            by=By.XPATH,
-                            value="/html/body/div[3]/div/div[2]/div[2]/div/div/div/div/div/div/div/div[5]/div/div[6]",
-                        )
-                        file = BytesIO(element.screenshot_as_png)
+                        file = BytesIO(champ[0]["skills"])
 
                         # pm the user the div as an image
                         await message.author.send(file=discord.File(file, "image.png"))
-                        driver.quit()
             else:
                 await message.channel.send("Please supply a champion.")
 
@@ -140,37 +100,26 @@ async def on_presence_update(before, after):
         champion = activity.large_image_text.lower().replace("'", "").replace(".", "").replace(" ", "")
         user = client.get_user(after.id)
         await user.send(
-            f"Hey, I noticed you are playing {champion}. Here are some pieces of information that might help you out."
+            f"Hey, I noticed you are playing {champion.capitalize()}. "
+            "Here are some pieces of information that might help you out."
         )
-        url = f"https://u.gg/lol/champions/{champion}/build"
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-        driver.set_window_position(0, 0)
-        driver.set_window_size(1920, 1080)
-        driver.get(url)
-
-        # deal with privacy setting acceptance
-        WebDriverWait(driver, 15).until(ec.element_to_be_clickable((By.CLASS_NAME, "css-47sehv"))).click()
-
-        element = driver.find_element(
-            by=By.XPATH,
-            value="/html/body/div[3]/div/div[2]/div[2]/div/div/div/div/div/div/div/div[5]/div/div[6]",
-        )
-        file = BytesIO(element.screenshot_as_png)
+        db_client = MongoClient(
+            f"mongodb+srv://{config('MONGODB_USERNAME')}:{config('MONGODB_PASSWORD')}@leaguebot.3wl3vhh.mongodb.net/?retryWrites=true&w=majority",
+            server_api=ServerApi('1'))
+        league_db = db_client["leaguebot"]
+        champions = league_db["champions"]
+        champ = champions.find({"name": champion})
+        skill_file = BytesIO(champ[0]["skills"])
         await user.send(
-            f"This is the skilling order for {champion}.",
-            file=discord.File(file, "image.png"),
+            f"This is the skilling order for {champion.capitalize()}.",
+            file=discord.File(skill_file, "image.png"),
         )
 
-        element = driver.find_element(
-            by=By.XPATH,
-            value="/html/body/div[3]/div/div[2]/div[2]/div/div/div/div/div/div/div/div[5]/div/div[9]",
-        )
-        file = BytesIO(element.screenshot_as_png)
+        build_file = BytesIO(champ[0]["build"])
         await user.send(
-            f"These are the items you should be building for {champion}, in order.",
-            file=discord.File(file, "image.png"),
+            f"These are the items you should be building for {champion.capitalize()}, in order.",
+            file=discord.File(build_file, "image.png"),
         )
-        driver.quit()
 
 
 client.run(config("CLIENT_RUN_KEY"))
