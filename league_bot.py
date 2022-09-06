@@ -1,5 +1,6 @@
-from decouple import config
 import discord
+import certifi
+from decouple import config
 from io import BytesIO
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
@@ -8,6 +9,8 @@ intents = discord.Intents.all()
 intents.message_content = True
 
 client = discord.Client(intents=intents)
+
+ca = certifi.where()
 
 
 @client.event
@@ -32,7 +35,7 @@ async def on_message(message):
                     try:
                         db_client = MongoClient(
                             f"mongodb+srv://{config('MONGODB_USERNAME')}:{config('MONGODB_PASSWORD')}@leaguebot.3wl3vhh.mongodb.net/?retryWrites=true&w=majority",
-                            server_api=ServerApi('1'))
+                            server_api=ServerApi('1'), tlsCAFile=ca)
                         league_db = db_client["leaguebot"]
                         champions = league_db["champions"]
                         champ = champions.find({"name": champion})
@@ -55,7 +58,7 @@ async def on_message(message):
                     try:
                         db_client = MongoClient(
                             f"mongodb+srv://{config('MONGODB_USERNAME')}:{config('MONGODB_PASSWORD')}@leaguebot.3wl3vhh.mongodb.net/?retryWrites=true&w=majority",
-                            server_api=ServerApi('1'))
+                            server_api=ServerApi('1'), tlsCAFile=ca)
                         league_db = db_client["leaguebot"]
                         champions = league_db["champions"]
                         champ = champions.find({"name": champion})
@@ -78,7 +81,7 @@ async def on_message(message):
                     try:
                         db_client = MongoClient(
                             f"mongodb+srv://{config('MONGODB_USERNAME')}:{config('MONGODB_PASSWORD')}@leaguebot.3wl3vhh.mongodb.net/?retryWrites=true&w=majority",
-                            server_api=ServerApi('1'))
+                            server_api=ServerApi('1'), tlsCAFile=ca)
                         league_db = db_client["leaguebot"]
                         champions = league_db["champions"]
                         champ = champions.find({"name": champion})
@@ -105,7 +108,7 @@ async def on_presence_update(before, after):
         )
         db_client = MongoClient(
             f"mongodb+srv://{config('MONGODB_USERNAME')}:{config('MONGODB_PASSWORD')}@leaguebot.3wl3vhh.mongodb.net/?retryWrites=true&w=majority",
-            server_api=ServerApi('1'))
+            server_api=ServerApi('1'), tlsCAFile=ca)
         league_db = db_client["leaguebot"]
         champions = league_db["champions"]
         champ = champions.find({"name": champion})
