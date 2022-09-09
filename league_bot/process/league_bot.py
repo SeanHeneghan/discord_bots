@@ -1,99 +1,47 @@
 import discord
 import certifi
+import asyncio
 from decouple import config
 from io import BytesIO
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 
-intents = discord.Intents.all()
-intents.message_content = True
-
-client = discord.Client(intents=intents)
-
 ca = certifi.where()
+DISCORD_GUILD = config("GUILD_ID")
 
 
-@client.event
-async def on_ready():
-    print(f"We have logged in as {client.user}")
+class LeagueBot(discord.Client):
+    def __init__(self):
+        super().__init__(intents=discord.Intents.all())
+        self.synced = False
+
+    async def on_ready(self):
+        await self.wait_until_ready()
+        if not self.synced:
+            await tree.sync(guild=discord.Object(id=DISCORD_GUILD))
+            self.synced = True
+        print(f"We have logged in as {self.user}")
 
 
-@client.event
-async def on_message(message):
-    if message.author == client.user:
-        return
+client = LeagueBot()
+tree = discord.app_commands.CommandTree(client)
 
-    if message.content.startswith("__"):
-        cmd = message.content.split()[0].replace("__", "")
 
-        if cmd == "runes":
-            if len(message.content.split()) > 1:
-                champion = message.content.split()[1]
-                if type(champion) != str or len(message.content.split()) > 2:
-                    await message.channel.send("Please only call the function via __*action* *champion* *game_mode*.")
-                else:
-                    try:
-                        db_client = MongoClient(
-                            f"mongodb+srv://{config('MONGODB_USERNAME')}:{config('MONGODB_PASSWORD')}@leaguebot.3wl3vhh.mongodb.net/?retryWrites=true&w=majority",
-                            server_api=ServerApi('1'), tlsCAFile=ca)
-                        league_db = db_client["leaguebot"]
-                        champions = league_db["champions"]
-                        champ = champions.find({"name": champion})
-                    except:
-                        await message.channel.send("Not a valid League Of Legends Champion.")
-                    else:
-                        file = BytesIO(champ[0]["runes"])
+@tree.command(name="champ_helper", description="check required builds/runes/skills for entered champion",
+              guild=discord.Object(id=DISCORD_GUILD))
+async def champ_helper(interaction: discord.Interaction, requested_info: str, champion: str):
+    await interaction.response.defer()
+    await asyncio.sleep(1)
+    db_client = MongoClient(
+        f"mongodb+srv://{config('MONGODB_USERNAME')}:{config('MONGODB_PASSWORD')}@leaguebot.3wl3vhh.mongodb.net/?retryWrites=true&w=majority",
+        server_api=ServerApi('1'), tlsCAFile=ca)
+    league_db = db_client["leaguebot"]
+    champions = league_db["champions"]
+    champ = champions.find({"name": champion})
+    file = BytesIO(champ[0][requested_info])
 
-                        # pm the user the div as an image
-                        await message.author.send(file=discord.File(file, "image.png"))
-            else:
-                await message.channel.send("Please supply a champion.")
-
-        if cmd == "build":
-            if len(message.content.split()) > 1:
-                champion = message.content.split()[1]
-                if type(champion) != str or len(message.content.split()) > 2:
-                    await message.channel.send("Please only call the function via __*action* *champion* *game_mode*.")
-                else:
-                    try:
-                        db_client = MongoClient(
-                            f"mongodb+srv://{config('MONGODB_USERNAME')}:{config('MONGODB_PASSWORD')}@leaguebot.3wl3vhh.mongodb.net/?retryWrites=true&w=majority",
-                            server_api=ServerApi('1'), tlsCAFile=ca)
-                        league_db = db_client["leaguebot"]
-                        champions = league_db["champions"]
-                        champ = champions.find({"name": champion})
-                    except:
-                        await message.channel.send("Not a valid League Of Legends Champion.")
-                    else:
-                        file = BytesIO(champ[0]["build"])
-
-                        # pm the user the div as an image
-                        await message.author.send(file=discord.File(file, "image.png"))
-            else:
-                await message.channel.send("Please supply a champion.")
-
-        if cmd == "skills":
-            if len(message.content.split()) > 1:
-                champion = message.content.split()[1]
-                if type(champion) != str or len(message.content.split()) > 2:
-                    await message.channel.send("Please only call the function via __*action* *champion* *game_mode*.")
-                else:
-                    try:
-                        db_client = MongoClient(
-                            f"mongodb+srv://{config('MONGODB_USERNAME')}:{config('MONGODB_PASSWORD')}@leaguebot.3wl3vhh.mongodb.net/?retryWrites=true&w=majority",
-                            server_api=ServerApi('1'), tlsCAFile=ca)
-                        league_db = db_client["leaguebot"]
-                        champions = league_db["champions"]
-                        champ = champions.find({"name": champion})
-                    except:
-                        await message.channel.send("Not a valid League Of Legends Champion.")
-                    else:
-                        file = BytesIO(champ[0]["skills"])
-
-                        # pm the user the div as an image
-                        await message.author.send(file=discord.File(file, "image.png"))
-            else:
-                await message.channel.send("Please supply a champion.")
+    # pm the user the div as an image
+    await interaction.followup.send(file=discord.File(file, "image.png"), ephemeral=True)
 
 
 @client.event
